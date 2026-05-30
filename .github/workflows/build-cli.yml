@@ -63,6 +63,10 @@ jobs:
           file build/pw-darwin-arm64
 
       # ---- 编译 darwin-x64（通过 Rosetta 2） ----
+      - name: 安装 Rosetta 2
+        run: |
+          sudo softwareupdate --install-rosetta --agree-to-license
+
       - name: 编译 darwin-x64
         run: |
           arch -x86_64 dart compile exe bin/pw.dart \
