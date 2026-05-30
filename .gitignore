@@ -1,0 +1,12 @@
+# Dart
+.dart_tool/
+.packages
+pubspec.lock
+
+# 编译产物
+build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
