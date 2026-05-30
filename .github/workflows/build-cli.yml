@@ -171,8 +171,7 @@ jobs:
             -v "${{ github.workspace }}:/app" \
             -w /app \
             dart:stable \
-            bash -c "dart pub get --no-precompile && dart compile exe bin/pw.dart -o build/pw-linux-arm64 -D version=${{ steps.version.outputs.version }}"
-          chmod +x build/pw-linux-arm64
+            bash -c "dart pub get --no-precompile && dart compile exe bin/pw.dart -o build/pw-linux-arm64 -D version=${{ steps.version.outputs.version }} && chmod +x build/pw-linux-arm64"
           echo "✅ linux-arm64 编译完成"
           file build/pw-linux-arm64
 
