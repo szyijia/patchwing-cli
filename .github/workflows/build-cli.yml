@@ -62,14 +62,27 @@ jobs:
           echo "✅ darwin-arm64 编译完成"
           file build/pw-darwin-arm64
 
-      # ---- 编译 darwin-x64（通过 Rosetta 2） ----
+      # ---- 编译 darwin-x64（下载 x64 Dart SDK + Rosetta 2） ----
       - name: 安装 Rosetta 2
         run: |
           sudo softwareupdate --install-rosetta --agree-to-license
 
+      - name: 下载 x64 Dart SDK
+        run: |
+          # 获取当前 Dart SDK 版本号
+          DART_VERSION=$(dart --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "当前 Dart 版本: ${DART_VERSION}"
+          # 下载 x64 版本的 Dart SDK
+          curl -sSL "https://storage.googleapis.com/dart-archive/channels/stable/release/${DART_VERSION}/sdk/dartsdk-macos-x64-release.zip" -o /tmp/dart-x64.zip
+          unzip -q /tmp/dart-x64.zip -d /tmp/dart-x64
+          echo "✅ x64 Dart SDK 下载完成"
+          file /tmp/dart-x64/dart-sdk/bin/dart
+
       - name: 编译 darwin-x64
         run: |
-          arch -x86_64 dart compile exe bin/pw.dart \
+          # 使用 x64 版本的 Dart SDK 编译（通过 Rosetta 2 运行）
+          /tmp/dart-x64/dart-sdk/bin/dart pub get --no-precompile
+          /tmp/dart-x64/dart-sdk/bin/dart compile exe bin/pw.dart \
             -o build/pw-darwin-x64 \
             -D version=${{ steps.version.outputs.version }}
           chmod +x build/pw-darwin-x64
@@ -244,9 +257,9 @@ jobs:
       - name: 配置 MinIO
         run: |
           mc alias set patchwing \
-            "${{ vars.MINIO_ENDPOINT }}" \
-            "${{ vars.MINIO_ACCESS_KEY }}" \
-            "${{ vars.MINIO_SECRET_KEY }}"
+            "${{ secrets.MINIO_ENDPOINT }}" \
+            "${{ secrets.MINIO_ACCESS_KEY }}" \
+            "${{ secrets.MINIO_SECRET_KEY }}"
 
       - name: 上传到 MinIO CDN
         run: |
