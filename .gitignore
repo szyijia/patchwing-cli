@@ -10,3 +10,10 @@ build/
 .idea/
 .vscode/
 *.iml
+
+# 测试项目和构建产物
+testapp/
+*.apk
+*.so
+*.bin
+.patchwing/

@@ -5,8 +5,10 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 
 import '../core/api_client.dart';
-import '../core/engine_artifact.dart';
 import '../core/flutter_project.dart';
+import '../engine/engine_manager.dart';
+import '../config/patchwing_yaml.dart';
+import '../flutter/flutter_detector.dart';
 
 /// pw patch — 构建新版本并生成/上传补丁
 class PatchCommand extends Command<int> {
@@ -50,38 +52,50 @@ class PatchCommand extends Command<int> {
     var localEngineHost = argResults!['local-engine-host'] as String?;
     var bsdiffBin = argResults!['bsdiff-bin'] as String?;
 
-    // 自动检测 engine artifact
+    // 自动获取 engine 参数（如果用户没有手动指定）
     if (localEngine == null && localEngineSrc == null) {
-      // 先尝试直接获取
-      var engineArgs = EngineArtifact.getLocalEngineArgs();
+      // 从 patchwing.yaml 读取 flutter_version
+      final config = PatchwingYaml.load(appDir);
+      String? flutterVersion = config?.flutterVersion;
 
-      // 如果找不到，尝试自动检测版本并下载
+      // 若未指定则自动检测
+      if (flutterVersion == null) {
+        final detector = FlutterDetector();
+        flutterVersion = await detector.getFlutterVersion();
+        logger.warn('flutter_version 未指定，使用检测到的版本: $flutterVersion');
+      }
+
+      final engineManager = EngineManager();
+      var engineArgs = engineManager.getLocalEngineArgs(
+        flutterVersion: flutterVersion!,
+      );
+
       if (engineArgs == null) {
-        final detectedVersion = EngineArtifact.detectFlutterVersion();
-        final engineProgress = logger.progress(
-            '检测到 Flutter ${detectedVersion ?? "未知"}，正在准备 Engine Artifact');
-        final version = await EngineArtifact.ensureEngine(
-          flutterVersion: detectedVersion,
+        // 尝试自动下载
+        final engineProgress =
+            logger.progress('检测到 Flutter $flutterVersion，正在准备 Engine Artifact');
+        final version = await engineManager.ensureEngine(
+          flutterVersion: flutterVersion,
           onProgress: (msg) => logger.detail(msg),
         );
         if (version != null) {
-          engineArgs =
-              EngineArtifact.getLocalEngineArgs(flutterVersion: version);
+          engineArgs = engineManager.getLocalEngineArgs(
+            flutterVersion: version,
+          );
           engineProgress.complete('Engine Artifact 就绪 (Flutter $version)');
         } else {
           engineProgress.fail('Engine Artifact 不可用');
           logger.err('找不到 Patchwing Engine Artifact');
-          logger.info('  当前 Flutter 版本: ${detectedVersion ?? "未知"}');
-          logger
-              .info('  支持的版本: ${EngineArtifact.supportedVersions.join(", ")}');
-          logger.info('  请运行 pw doctor 查看安装指引');
+          logger.info('  当前 Flutter 版本: $flutterVersion');
+          logger.info('  运行 pw doctor --fix 自动下载');
+          logger.info('  或运行 pw init 重新初始化');
           return 1;
         }
       }
 
       if (engineArgs != null) {
         localEngine = engineArgs['local-engine'];
-        localEngineSrc = engineArgs['local-engine-src'];
+        localEngineSrc = engineArgs['local-engine-src-path'];
         localEngineHost = engineArgs['local-engine-host'];
       }
     }

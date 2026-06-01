@@ -81,12 +81,14 @@ class ApiClient {
   }
 
   /// 创建 Release（上传 baseline）
+  /// [force] 如果为 true，则删除已存在的同名 release 后重建
   Future<Map<String, dynamic>> createRelease({
     required int appId,
     required String version,
     required String baselinePath,
     String? flutterVersion,
     String abi = 'arm64-v8a',
+    bool force = false,
   }) async {
     final request = http.MultipartRequest(
       'POST',
@@ -97,6 +99,9 @@ class ApiClient {
     request.fields['abi'] = abi;
     if (flutterVersion != null) {
       request.fields['flutter_version'] = flutterVersion;
+    }
+    if (force) {
+      request.fields['force'] = 'true';
     }
     request.files.add(
       await http.MultipartFile.fromPath('baseline', baselinePath),
@@ -116,12 +121,25 @@ class ApiClient {
     return _handleListResponse(resp);
   }
 
+  /// 删除 Release
+  Future<Map<String, dynamic>> deleteRelease({
+    required int appId,
+    required int releaseId,
+  }) async {
+    final resp = await http.delete(
+      Uri.parse('$baseUrl/api/v1/apps/$appId/releases/$releaseId'),
+      headers: _headers,
+    );
+    return _handleResponse(resp);
+  }
+
   /// 创建 Patch（上传 patch.bin）
   Future<Map<String, dynamic>> createPatch({
     required int appId,
     required int releaseId,
     required String patchPath,
     String? targetHash,
+    int? sourceReleaseId,
   }) async {
     final request = http.MultipartRequest(
       'POST',
@@ -131,6 +149,9 @@ class ApiClient {
     request.files.add(await http.MultipartFile.fromPath('patch', patchPath));
     if (targetHash != null) {
       request.fields['target_hash'] = targetHash;
+    }
+    if (sourceReleaseId != null) {
+      request.fields['source_release_id'] = sourceReleaseId.toString();
     }
 
     final streamedResp = await request.send();

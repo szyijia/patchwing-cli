@@ -1,7 +1,4 @@
-library patchwing_cli;
+// lib/patchwing_cli.dart
+// Patchwing CLI 库入口
 
-export 'src/cli_runner.dart';
-export 'src/core/api_client.dart';
-export 'src/core/config.dart';
-export 'src/core/engine_artifact.dart';
-export 'src/core/flutter_project.dart';
+export 'src/cli_runner.dart' show PatchwingCliRunner;

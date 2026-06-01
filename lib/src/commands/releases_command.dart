@@ -63,9 +63,10 @@ class ReleasesCommand extends Command<int> {
       }
 
       logger.info('');
-      logger.info('  ID  │ Version        │ ABI          │ Status  │ Created');
       logger.info(
-        '  ────┼────────────────┼──────────────┼─────────┼──────────────',
+          '  ID  │ Version        │ ABI          │ Status  │ Patches │ Created');
+      logger.info(
+        '  ────┼────────────────┼──────────────┼─────────┼─────────┼──────────────',
       );
 
       for (final r in releases) {
@@ -74,8 +75,24 @@ class ReleasesCommand extends Command<int> {
         final version = (map['version'] as String).padRight(14);
         final abi = (map['abi'] as String? ?? 'arm64-v8a').padRight(12);
         final status = (map['status'] as String? ?? 'active').padRight(7);
+        final patches = (map['patches'] as List?)?.length ?? 0;
+        final patchesStr = patches.toString().padRight(7);
         final created = (map['created_at'] as String? ?? '').substring(0, 10);
-        logger.info('  $id │ $version │ $abi │ $status │ $created');
+        logger
+            .info('  $id │ $version │ $abi │ $status │ $patchesStr │ $created');
+
+        // 显示跨版本 patch
+        final patchesList = map['patches'] as List?;
+        if (patchesList != null && patchesList.isNotEmpty) {
+          for (final p in patchesList) {
+            final patchMap = p as Map<String, dynamic>;
+            final number = patchMap['number'];
+            final sourceVersion = patchMap['source_release_version'] as String?;
+            if (sourceVersion != null && sourceVersion.isNotEmpty) {
+              logger.info('       └─ Patch #$number ← $sourceVersion (跨版本)');
+            }
+          }
+        }
       }
 
       logger.info('');
